@@ -1,0 +1,30 @@
+# Secretos (nunca commitear)
+.env
+*.env
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Tooling de agentes (opencode / skills) — fuera del repo
+.atl/
+.opencode/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+*.log
+
+# OS / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
