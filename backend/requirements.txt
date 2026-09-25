@@ -1,0 +1,8 @@
+fastapi>=0.118
+uvicorn[standard]>=0.34
+pymongo>=4.14
+openai>=1.99
+pydantic>=2.12
+pydantic-settings>=2.10
+python-dotenv>=1.1
+typesafe-sdk>=0.7
