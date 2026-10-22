@@ -28,3 +28,11 @@ build/
 Thumbs.db
 .vscode/
 .idea/
+
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+artifacts/
+models/cache/
+.env
