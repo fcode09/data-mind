@@ -48,3 +48,7 @@ cd apps/web && npm test && npm run build
 ```
 
 Set TEST_DATABASE_URL to a restricted synthetic test database for Go PostgreSQL tests. ADMIN_DATABASE_URL is used only by explicit fixture tests. Set RUN_HYBRID_FIXTURE_TEST=true only for the explicitly synthetic vector fixture write/cleanup test. Set LOCAL_LLM_TEST_URL for the real model adapter test. Use docs/voice.md and docs/embeddings.md for real local model runs. Never run fixtures against production.
+
+## Clean-environment dependency correction
+
+The first GitHub CI run exposed an undeclared test-only dependency: Starlette TestClient requires httpx2. The warm development environment had it installed, masking the incomplete test extra. The test extra now declares httpx2, and requirements.lock was regenerated with its transitive dependencies. Installing only that lock into a brand-new Python 3.12.14 virtual environment passed all 13 Python tests and pip check. No test was removed or weakened. GitHub CI results remain independently verifiable in the repository Actions tab.
