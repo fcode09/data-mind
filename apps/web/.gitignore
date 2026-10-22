@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.tsbuildinfo
+public/models/*.tar.gz
+public/models/*.zip
+public/models/*.wav
