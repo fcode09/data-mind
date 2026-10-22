@@ -1,0 +1,34 @@
+# Add after compose.yaml; optionally combine with compose.voice.yaml.
+services:
+  llm-model-init:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.models
+    profiles: [tools]
+    volumes:
+      - model_cache:/models
+    command: [--help]
+  llama:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.llama
+    command: ["-m", /models/llama/Qwen3-0.6B-Q8_0.gguf, --host, 0.0.0.0, --port, "8080", "-c", "2048", "-t", "2", "-ngl", "0", --parallel, "1", --reasoning, "off", --alias, qwen3-local]
+    volumes:
+      - model_cache:/models:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8080/health]
+      interval: 10s
+      timeout: 3s
+      retries: 18
+      start_period: 30s
+  api:
+    environment:
+      LLAMA_BASE_URL: http://llama:8080/v1
+      LLAMA_MODEL: qwen3-local
+    depends_on:
+      llama:
+        condition: service_healthy
+volumes:
+  model_cache:
