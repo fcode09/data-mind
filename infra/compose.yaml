@@ -1,0 +1,56 @@
+# Synthetic-only local stack. PostgreSQL, MCP and voice are not published to LAN.
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: data_mind
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a local demo database password}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d data_mind"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  mcp:
+    build: {context: .., dockerfile: infra/Dockerfile}
+    command: ["/app/mcp"]
+    environment:
+      MCP_ADDR: 0.0.0.0:8101
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:?Set restricted reader DSN using postgres hostname}
+      MCP_INTERNAL_TOKEN: ${MCP_INTERNAL_TOKEN:?Set local internal token}
+    depends_on:
+      postgres: {condition: service_healthy}
+  api:
+    build: {context: .., dockerfile: infra/Dockerfile}
+    ports: ["127.0.0.1:8100:8100"]
+    environment:
+      API_ADDR: 0.0.0.0:8100
+      DEMO_MODE: "true"
+      API_SESSION_SECRET: ${API_SESSION_SECRET:?Set session secret}
+      MCP_INTERNAL_TOKEN: ${MCP_INTERNAL_TOKEN}
+      MCP_URL: http://mcp:8101/mcp
+      VOICE_URL: http://voice:8102
+      VOICE_INTERNAL_TOKEN: ${VOICE_INTERNAL_TOKEN:-${MCP_INTERNAL_TOKEN}}
+      API_STATE_PATH: /state/turns.json
+    volumes: ["api_state:/state"]
+    depends_on: [mcp]
+  worker:
+    build: {context: .., dockerfile: infra/Dockerfile}
+    profiles: ["tools"]
+    entrypoint: ["/app/worker"]
+    environment:
+      DATABASE_ADMIN_URL: ${COMPOSE_DATABASE_ADMIN_URL:?Set administrator DSN using postgres hostname}
+    depends_on:
+      postgres: {condition: service_healthy}
+  voice:
+    build: {context: .., dockerfile: infra/Dockerfile.voice}
+    profiles: ["voice"]
+    environment:
+      VOICE_INTERNAL_TOKEN: ${VOICE_INTERNAL_TOKEN:-${MCP_INTERNAL_TOKEN}}
+      MODEL_DIR: /models
+    volumes: ["../models/cache:/models:ro"]
+volumes:
+  postgres_data:
+  api_state:

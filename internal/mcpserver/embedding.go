@@ -36,7 +36,10 @@ func queryEmbedding(ctx context.Context, endpoint, query string) ([]float32, err
 	if err != nil {
 		return nil, err
 	}
-	token := os.Getenv("VOICE_INTERNAL_TOKEN")
+	token := os.Getenv("MODEL_INTERNAL_TOKEN")
+	if token == "" {
+		token = os.Getenv("VOICE_INTERNAL_TOKEN")
+	}
 	if token == "" {
 		token = os.Getenv("MCP_INTERNAL_TOKEN")
 	}

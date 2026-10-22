@@ -1,0 +1,18 @@
+{
+  "tenants_exact": {
+    "1": 200330,
+    "2": 199836,
+    "3": 200312,
+    "4": 199673,
+    "5": 199849
+  },
+  "query_samples": 20,
+  "query_p50_seconds": 0.2716429430001881,
+  "query_p95_seconds": 0.28564133399959246,
+  "rag_method": "hybrid_exact_cosine_rrf",
+  "rag_top_source": "SOP ficticio: Alumbrado",
+  "verified_answer_audio_seconds": 13.425,
+  "synthetic_speech_transcript": "¿Cuántos incidentes hay en total?",
+  "clarification_speech_rejected": true,
+  "real_microphone_tested": false
+}
