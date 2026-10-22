@@ -1,0 +1,75 @@
+name: Docker Compose checks
+on:
+  push:
+    branches: [develop, feature/docker-compose-launch]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      COMPOSE_PROJECT_NAME: data-mind-ci
+      SEED_ROWS: '10000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create disposable local configuration
+        run: python scripts/docker_setup.py
+      - name: Validate Compose without displaying secrets
+        run: docker compose config --quiet
+      - name: Build and start the complete core stack
+        run: docker compose up --build -d --wait --wait-timeout 240
+      - name: Test web, API, MCP, tenant scope and real evidence
+        run: python scripts/compose-smoke.py --rows "$SEED_ROWS"
+      - name: Confirm application database role is read-only and cannot bypass RLS
+        shell: bash
+        run: |
+          reader_password=$(python -c "from pathlib import Path; print(next(line.split('=', 1)[1] for line in Path('.env').read_text().splitlines() if line.startswith('READER_PASSWORD=')))")
+          echo "::add-mask::$reader_password"
+          reader_psql() {
+            docker compose exec -T -e PGPASSWORD="$reader_password" postgres psql -h 127.0.0.1 -U data_mind_app -d data_mind -v ON_ERROR_STOP=1 "$@"
+          }
+          test "$(reader_psql -Atc 'SHOW transaction_read_only')" = on
+          test "$(reader_psql -Atc 'SELECT rolsuper OR rolbypassrls OR rolcreatedb OR rolcreaterole FROM pg_roles WHERE rolname = current_user')" = f
+          if reader_psql -c 'DELETE FROM incidents WHERE false'; then
+            echo 'ERROR: read-only connection accepted a write statement'
+            exit 1
+          fi
+          if reader_psql -c 'BEGIN READ WRITE; DELETE FROM incidents WHERE false; ROLLBACK'; then
+            echo 'ERROR: reader grants allowed a write after disabling read-only transaction mode'
+            exit 1
+          fi
+      - name: Confirm seed can be repeated without duplicate records
+        run: |
+          docker compose run --rm --no-deps seed
+          python scripts/compose-smoke.py --rows "$SEED_ROWS"
+      - name: Confirm restart preserves the synthetic database
+        run: |
+          docker compose down
+          docker compose up -d --wait --wait-timeout 240
+          python scripts/compose-smoke.py --rows "$SEED_ROWS"
+      - name: Show status on failure
+        if: failure()
+        run: docker compose ps --all && docker compose logs --tail=100
+      - name: Remove disposable CI containers and volumes
+        if: always()
+        run: docker compose down --volumes --remove-orphans
+  voice-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build CPU voice image without downloading model weights
+        run: docker build --file infra/Dockerfile.voice --tag data-mind-voice:ci .
+  llm-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build verified official CPU llama.cpp runtime
+        run: docker build --file infra/Dockerfile.llama --tag data-mind-llama:ci .
+      - name: Verify executable and shared library dependencies
+        run: docker run --rm data-mind-llama:ci --version

@@ -1,0 +1,13 @@
+# Official llama.cpp b11669 CPU release. amd64-only, never fetches model weights.
+FROM debian:trixie-slim AS fetch
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+ARG TARGETARCH
+RUN test "$TARGETARCH" = amd64
+WORKDIR /download
+RUN curl --fail --location --retry 3 -o llama.tar.gz https://github.com/ggml-org/llama.cpp/releases/download/b11669/llama-b11669-bin-ubuntu-x64.tar.gz && echo 'cf07c1c112d709bd67e522017471de57ed0ec8bea031d732c5422351c07f65ac  llama.tar.gz' | sha256sum -c - && mkdir /llama && tar -xzf llama.tar.gz -C /llama --strip-components=1
+FROM debian:trixie-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libgomp1 libssl3t64 libstdc++6 libzstd1 zlib1g && rm -rf /var/lib/apt/lists/*
+COPY --from=fetch /llama/ /app/
+ENV LD_LIBRARY_PATH=/app
+USER 10001:10001
+ENTRYPOINT ["/app/llama-server"]

@@ -4,6 +4,20 @@ Spanish conversational analytics over reproducible fictional data, with **Go API
 
 This rebuild preserves the original Git history. Main remains unchanged; development proceeds through feature branches merged into develop.
 
+## Start with Docker Compose
+
+```bash
+# Once: create random local demo secrets (requires Docker, no local Python).
+bash scripts/docker.sh init
+# Start DB, migrations, one million fictional records, MCP, API and web UI.
+bash scripts/docker.sh up
+```
+
+Windows PowerShell: `./scripts/docker.ps1 init`, then `./scripts/docker.ps1 up`.
+Open **http://localhost:8080**. No WSL shell is required; Docker must run Linux containers.
+[Complete Docker guide](docs/runbooks/docker.md) · [Optional voice and local models](docs/runbooks/docker-models.md).
+Text works without model downloads; voice and the optional LLM have explicit preparation steps.
+
 ## Start here
 
 - [Native Windows and Linux setup](docs/runbooks/native-setup.md)
