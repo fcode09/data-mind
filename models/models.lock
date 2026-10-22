@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-22",
+  "files": [
+    {
+      "group": "kokoro",
+      "path": "kokoro/config.json",
+      "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/config.json",
+      "sha256": "5abb01e2403b072bf03d04fde160443e209d7a0dad49a423be15196b9b43c17f",
+      "size": 2351,
+      "license": "Apache-2.0"
+    },
+    {
+      "group": "kokoro",
+      "path": "kokoro/kokoro-v1_0.pth",
+      "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/kokoro-v1_0.pth",
+      "sha256": "496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4",
+      "size": 327212226,
+      "license": "Apache-2.0"
+    },
+    {
+      "group": "kokoro",
+      "path": "kokoro/ef_dora.pt",
+      "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/ef_dora.pt",
+      "sha256": "d9d69b0f8a2b87a345f269d89639f89dfbd1a6c9da0c498ae36dd34afcf35530",
+      "size": 523420,
+      "license": "Apache-2.0"
+    },
+    {
+      "group": "whisper-small",
+      "path": "whisper-small/config.json",
+      "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/config.json",
+      "sha256": "b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828",
+      "size": 2370,
+      "license": "MIT"
+    },
+    {
+      "group": "whisper-small",
+      "path": "whisper-small/model.bin",
+      "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/model.bin",
+      "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+      "size": 483546902,
+      "license": "MIT"
+    },
+    {
+      "group": "whisper-small",
+      "path": "whisper-small/tokenizer.json",
+      "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/tokenizer.json",
+      "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab",
+      "size": 2203239,
+      "license": "MIT"
+    },
+    {
+      "group": "whisper-small",
+      "path": "whisper-small/vocabulary.txt",
+      "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/vocabulary.txt",
+      "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913",
+      "size": 459861,
+      "license": "MIT"
+    },
+    {
+      "group": "vosk",
+      "path": "vosk-model-small-es-0.42.zip",
+      "url": "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip",
+      "sha256": "09b239888f633ef2f0b4e09736e3d9936acfd810bc65d53fad45261762c6511f",
+      "size": 39817833,
+      "license": "Apache-2.0"
+    }
+  ]
+}
