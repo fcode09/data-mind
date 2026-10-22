@@ -1,0 +1,15 @@
+# CPU-only runtime. Weights are provisioned explicitly, never baked into the image.
+FROM python:3.12-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends espeak-ng libsndfile1 libgomp1 ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY infra/requirements.voice.lock /app/requirements.voice.lock
+# Keep PyTorch on its official CPU index, rather than installing CUDA dependencies.
+RUN pip install --no-cache-dir torch==2.14.1+cpu --index-url https://download.pytorch.org/whl/cpu && pip install --no-cache-dir -r requirements.voice.lock && pip check
+COPY apps/voice ./apps/voice
+COPY apps/__init__.py ./apps/__init__.py
+RUN python -c "import faster_whisper, kokoro, sentence_transformers; from apps.voice.main import app"
+ENV PYTHONPATH=/app MODEL_DIR=/models EMBEDDING_MODEL_DIR=/models/multilingual-e5-small HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2
+# Model caches are read-only; ephemeral Python/cache files use /tmp.
+ENV PYTHONDONTWRITEBYTECODE=1 HF_HOME=/tmp/huggingface XDG_CACHE_HOME=/tmp/cache
+USER 10001:10001
+CMD ["python", "-m", "uvicorn", "apps.voice.main:app", "--host", "0.0.0.0", "--port", "8102", "--workers", "1"]

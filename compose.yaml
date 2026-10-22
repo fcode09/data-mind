@@ -1,0 +1,89 @@
+name: data-mind
+x-go: &go
+  image: data-mind-go:local
+  build:
+    context: .
+    dockerfile: infra/Dockerfile
+services:
+  postgres:
+    image: pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+    environment:
+      POSTGRES_DB: data_mind
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/docker_setup.py first}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d data_mind']
+      interval: 3s
+      timeout: 3s
+      retries: 40
+  migrate:
+    <<: *go
+    command: [/app/worker, migrate, -vectors]
+    environment:
+      DATABASE_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/data_mind
+    depends_on:
+      postgres: {condition: service_healthy}
+  reader-role:
+    image: pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+    entrypoint: [psql, -h, postgres, -U, postgres, -d, data_mind, -v, ON_ERROR_STOP=1, -f, /init/reader.sql]
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      READER_PASSWORD: ${READER_PASSWORD:?Run scripts/docker_setup.py first}
+    volumes: [./infra/reader.sql:/init/reader.sql:ro]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  seed:
+    <<: *go
+    command: [/app/worker, seed, -rows, '${SEED_ROWS:-1000000}', -seed, '42', -batch-key, 'compose-base-v1']
+    environment:
+      DATABASE_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/data_mind
+    depends_on:
+      reader-role: {condition: service_completed_successfully}
+  mcp:
+    <<: *go
+    command: [/app/mcp]
+    environment:
+      MCP_ADDR: 0.0.0.0:8101
+      DATABASE_URL: postgresql://data_mind_app:${READER_PASSWORD}@postgres:5432/data_mind
+      MCP_INTERNAL_TOKEN: ${MCP_INTERNAL_TOKEN:?Run scripts/docker_setup.py first}
+      CURSOR_SECRET: ${CURSOR_SECRET:?Run scripts/docker_setup.py first}
+    depends_on:
+      seed: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD-SHELL, 'test "$$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8101/mcp)" = 401']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  api:
+    <<: *go
+    environment:
+      API_ADDR: 0.0.0.0:8100
+      DEMO_MODE: 'true'
+      API_SESSION_SECRET: ${API_SESSION_SECRET:?Run scripts/docker_setup.py first}
+      MCP_INTERNAL_TOKEN: ${MCP_INTERNAL_TOKEN}
+      MCP_URL: http://mcp:8101/mcp
+      VOICE_URL: http://voice:8102
+      VOICE_INTERNAL_TOKEN: ${VOICE_INTERNAL_TOKEN:?Run scripts/docker_setup.py first}
+      API_STATE_PATH: /state/turns.json
+    volumes: [api_state:/state]
+    depends_on:
+      mcp: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:8100/health]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  web:
+    build: {context: ., dockerfile: infra/Dockerfile.web}
+    ports: ['127.0.0.1:${WEB_PORT:-8080}:80']
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1/health]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+volumes:
+  postgres_data:
+  api_state:

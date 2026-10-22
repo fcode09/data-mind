@@ -1,0 +1,24 @@
+{
+  "batch_key": "go-baseline-million",
+  "dataset_version": "706a960d0d177e73b0982bbbd67fe787daf79dbca1dc2d39d632c2d88d7c096d",
+  "elapsed_seconds": 55.041003684,
+  "manifest": {
+    "count": 1000000,
+    "tenants": {
+      "1": 200330,
+      "2": 199836,
+      "3": 200312,
+      "4": 199673,
+      "5": 199849
+    },
+    "categories": {
+      "Alumbrado": 200079,
+      "Limpieza pública": 199935,
+      "Seguridad vial": 200317,
+      "Vías": 200177,
+      "Áreas verdes": 199492
+    },
+    "resolved_count": 333291,
+    "duration_sum_seconds": 28855234742
+  }
+}

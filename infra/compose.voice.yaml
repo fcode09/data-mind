@@ -1,0 +1,101 @@
+# Overlay: docker compose -f compose.yaml -f infra/compose.voice.yaml ...
+services:
+  model-init:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.models
+    profiles: [tools]
+    volumes:
+      - model_cache:/models
+      - browser_models:/browser-models
+    # Deliberately no license-acceptance default: run explicitly after review.
+    command: [--help]
+  voice:
+    image: data-mind-voice:local
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.voice
+    environment:
+      VOICE_INTERNAL_TOKEN: ${VOICE_INTERNAL_TOKEN:?Run the local setup script first}
+      MODEL_INTERNAL_TOKEN: ${VOICE_INTERNAL_TOKEN}
+      MODEL_DIR: /models
+      EMBEDDING_MODEL_DIR: /models/multilingual-e5-small
+      OMP_NUM_THREADS: ${MODEL_THREADS:-2}
+      MKL_NUM_THREADS: ${MODEL_THREADS:-2}
+    volumes:
+      - model_cache:/models:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, -c, "import os,urllib.request,pathlib; root=pathlib.Path('/models'); assert all((root/p).is_file() for p in ('whisper-small/model.bin','kokoro/kokoro-v1_0.pth','kokoro/ef_dora.pt','multilingual-e5-small/model.safetensors')), 'Run model-init first'; r=urllib.request.Request('http://127.0.0.1:8102/health',headers={'Authorization':'Bearer '+os.environ['VOICE_INTERNAL_TOKEN']}); urllib.request.urlopen(r,timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+  api:
+    environment:
+      VOICE_URL: http://voice:8102
+      VOICE_INTERNAL_TOKEN: ${VOICE_INTERNAL_TOKEN}
+    depends_on:
+      voice:
+        condition: service_healthy
+  embed-documents:
+    image: data-mind-go:local
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    command: [/app/worker, embed-documents]
+    environment:
+      DATABASE_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/data_mind
+      EMBEDDING_URL: http://voice:8102/embed
+      MODEL_INTERNAL_TOKEN: ${VOICE_INTERNAL_TOKEN}
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      voice:
+        condition: service_healthy
+    restart: "no"
+  mcp:
+    depends_on:
+      embed-documents:
+        condition: service_completed_successfully
+    environment:
+      EMBEDDING_URL: http://voice:8102/embed
+      MODEL_INTERNAL_TOKEN: ${VOICE_INTERNAL_TOKEN}
+  voice-assets:
+    image: data-mind-voice:local
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.voice
+    # This one-shot writes only to a Docker-managed asset volume, never the host.
+    # The long-running voice service continues as its unprivileged image user.
+    user: "0:0"
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        if [ ! -s /browser-models/consulting.wav ]; then
+          python -m apps.voice.prepare_assets --output /browser-models/.consulting.wav.tmp
+          chmod 644 /browser-models/.consulting.wav.tmp
+          mv /browser-models/.consulting.wav.tmp /browser-models/consulting.wav
+        fi
+    environment:
+      MODEL_DIR: /models
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      OMP_NUM_THREADS: ${MODEL_THREADS:-2}
+      MKL_NUM_THREADS: ${MODEL_THREADS:-2}
+    volumes:
+      - model_cache:/models:ro
+      - browser_models:/browser-models
+    depends_on:
+      voice:
+        condition: service_healthy
+    restart: "no"
+  web:
+    depends_on:
+      voice-assets:
+        condition: service_completed_successfully
+    volumes:
+      - browser_models:/usr/share/nginx/html/models:ro
+volumes:
+  model_cache:
+  browser_models:

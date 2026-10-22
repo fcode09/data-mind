@@ -1,0 +1,5 @@
+FROM python:3.12-slim-bookworm
+WORKDIR /app
+COPY scripts/download_models.py scripts/download_embedding_model.py scripts/prepare_container_models.py ./scripts/
+COPY models/models.lock ./models/models.lock
+ENTRYPOINT ["python", "scripts/prepare_container_models.py"]
