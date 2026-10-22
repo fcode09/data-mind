@@ -11,6 +11,7 @@ services:
     # Deliberately no license-acceptance default: run explicitly after review.
     command: [--help]
   voice:
+    image: data-mind-voice:local
     build:
       context: .
       dockerfile: infra/Dockerfile.voice
@@ -60,7 +61,39 @@ services:
     environment:
       EMBEDDING_URL: http://voice:8102/embed
       MODEL_INTERNAL_TOKEN: ${VOICE_INTERNAL_TOKEN}
+  voice-assets:
+    image: data-mind-voice:local
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.voice
+    # This one-shot writes only to a Docker-managed asset volume, never the host.
+    # The long-running voice service continues as its unprivileged image user.
+    user: "0:0"
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        if [ ! -s /browser-models/consulting.wav ]; then
+          python -m apps.voice.prepare_assets --output /browser-models/.consulting.wav.tmp
+          chmod 644 /browser-models/.consulting.wav.tmp
+          mv /browser-models/.consulting.wav.tmp /browser-models/consulting.wav
+        fi
+    environment:
+      MODEL_DIR: /models
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      OMP_NUM_THREADS: ${MODEL_THREADS:-2}
+      MKL_NUM_THREADS: ${MODEL_THREADS:-2}
+    volumes:
+      - model_cache:/models:ro
+      - browser_models:/browser-models
+    depends_on:
+      voice:
+        condition: service_healthy
+    restart: "no"
   web:
+    depends_on:
+      voice-assets:
+        condition: service_completed_successfully
     volumes:
       - browser_models:/usr/share/nginx/html/models:ro
 volumes:

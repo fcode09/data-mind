@@ -62,6 +62,10 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+      - name: Validate explicit model preparation image
+        run: |
+          docker build --file infra/Dockerfile.models --tag data-mind-models:ci .
+          docker run --rm data-mind-models:ci --help
       - name: Build CPU voice image without downloading model weights
         run: docker build --file infra/Dockerfile.voice --tag data-mind-voice:ci .
   llm-image:
